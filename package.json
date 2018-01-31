@@ -1,0 +1,15 @@
+{
+    "name": "crypto-donation-slack-notifier",
+    "preferGlobal": true,
+    "version": "0.0.1",
+    "author": "Troy McCabe <troymccabe@gmail.com>",
+    "description": "Notify Slack occupants of crypto donations",
+    "license": "MIT",
+    "engines": {
+        "node": ">=0.10"
+    },
+    "dependencies": {
+        "@slack/client": "*",
+        "discord.js": "^11.3.0"
+    }
+}
