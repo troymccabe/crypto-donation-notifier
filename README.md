@@ -12,11 +12,13 @@ Slack & Discord are currently supported
 To enable Slack notifications, you need the following env vars:
 
 `SLACK_WEBHOOK_URL`: The Webhook URL of this integration
+
 `SLACK_CHANNEL`: The channel to post notices to (e.g. `#donate`)
 
 To enable Discord notifications, you need the following env vars:
 
 `DISCORD_ID`: The ID of this webhook
+
 `DISCORD_TOKEN`: The token of this webhook
 
 To change the interval that this handler considers donations "new" 
