@@ -91,7 +91,7 @@ function getDonationsFromBlockExplorer(currency, address, notify, intervalSecond
                     tx = resp.items[i];
 
                     // the transaction occurred between the last run and now
-                    if (tx.time > timeBetweenRuns) {
+                    if (tx.blocktime && tx.blocktime > timeBetweenRuns) {
                         for (var j = 0; j < tx.vout.length; j++) {
                             vout = tx.vout[j];
 
@@ -178,7 +178,8 @@ exports.handler = function(event, context, callback) {
     }
 
     var checkInterval = process.env.CHECK_INTERVAL || 60;
-    // getDonationsFromCryptoID('ecc', '516674', notify, checkInterval);
-    // getDonationsFromCryptoID('ltc', '24758298', notify, checkInterval);
-    getDonationsFromBlockExplorer('btc', '1KFHE7w8BhaENAswwryaoccDb6qcT6DbYY', notify, 60);
-}();
+    getDonationsFromCryptoID('ecc', '516674', notify, checkInterval);
+    getDonationsFromCryptoID('ltc', '24758298', notify, checkInterval);
+    getDonationsFromBlockExplorer('bch', '1LC8zhYNXgRQ5d6sCTxDrC8wBq6D1gdQDZ', notify, 60);
+    getDonationsFromBlockExplorer('btc', '1LC8zhYNXgRQ5d6sCTxDrC8wBq6D1gdQDZ', notify, 60);
+};
