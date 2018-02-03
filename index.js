@@ -170,7 +170,6 @@ exports.handler = function(event, context, callback) {
                     var message = `New ${currency} donation of ${donation} ${currency}! ` +
                     `The wallet now has a balance of ${balance} ${currency}.` +
                     `\nView the tx here: ${url}`;
-                    console.log(message);
         
                     /* global slackClient */
                     if (slackClient) {
