@@ -52,12 +52,14 @@ function getDonationsFromCryptoID(currency, addressId, notify, intervalSeconds) 
                     txTimestamp = i == 0 ? resp.tx[i][3] : txTimestamp + resp.tx[i][3];
 
                     // the transaction occurred between the last run and now
-                    if (txTimestamp > timeBetweenRuns) {
+                    // and amount is > 0
+                    if (txTimestamp > timeBetweenRuns && resp.tx[i][4] > 0) {
                         notify(
                             currency.toUpperCase(), 
+                            resp.tx[i][1],
                             resp.tx[i][4], 
                             resp.tx[i][5],
-                            `https://chainz.cryptoid.info/${currency}/tx.dws?${resp.tx[i][0]}.htm`,
+                            `https://chainz.cryptoid.info/${currency}/tx.dws?${resp.tx[i][1]}.htm`,
                             i
                         );
                     }
@@ -107,6 +109,7 @@ function getDonationsFromBlockExplorer(currency, address, notify, intervalSecond
                                             res.on('end', function() {
                                                 notify(
                                                     currency.toUpperCase(),
+                                                    tx.txid,
                                                     vout.value,
                                                     balance * 1e-8,
                                                     `https://${domain}/tx/${tx.txid}`,
@@ -151,35 +154,52 @@ exports.handler = function(event, context, callback) {
         discordClient = new Discord.WebhookClient(process.env.DISCORD_ID, process.env.DISCORD_TOKEN);
     }
 
+    const S3 = require('aws-sdk/clients/s3');
+    var s3 = new S3({
+        apiVersion: '2006-03-01',
+        region: 'us-west-1'
+    });
+
     // Set up the callback so it can be called in each iteration, helps with the slack nonsense
-    var notify = function(currency, donation, balance, url, iteration) {
-        var message = `New ${currency} donation of ${donation} ${currency}! ` +
-            `The wallet now has a balance of ${balance} ${currency}.` +
-            `\nView the tx here: ${url}`;
+    var notify = function(currency, tx, donation, balance, url, iteration) {
+        var s3Opts = {'Bucket': 'ecc-donation-notifications', 'Key': `${currency}/${tx}`};
+        s3.headObject(
+            s3Opts,
+            function (error, data) {
+                if (error) {
+                    var message = `New ${currency} donation of ${donation} ${currency}! ` +
+                    `The wallet now has a balance of ${balance} ${currency}.` +
+                    `\nView the tx here: ${url}`;
+                    console.log(message);
+        
+                    /* global slackClient */
+                    if (slackClient) {
+                        // Delay Slack messages so they appear in order 
+                        // if we just called `send`, they'd hit Slack in random orders
+                        // pausing it 500ms (arbitrary) more for each iteration worked
+                        setTimeout(function() {
+                            slackClient.send(message, (error, resp) => {
+                                error ? console.error(`[ERROR] SLACK: ${error}`) : console.log('SLACK: NOTIFICATION SENT');
+                            });
+                        }, 500 * iteration);
+                    }
+            
+                    /* global discordClient */
+                    if (discordClient) {
+                        discordClient.send(message)
+                            .then(message => console.log('DISCORD: NOTIFICATION SENT'))
+                            .catch(error => console.error(`[ERROR] DISCORD: ${error}`));
+                    }
 
-        /* global slackClient */
-        if (slackClient) {
-            // Delay Slack messages so they appear in order 
-            // if we just called `send`, they'd hit Slack in random orders
-            // pausing it 500ms (arbitrary) more for each iteration worked
-            setTimeout(function() {
-                slackClient.send(message, (error, resp) => {
-                    error ? console.error(`[ERROR] SLACK: ${error}`) : console.log('SLACK: NOTIFICATION SENT');
-                });
-            }, 500 * iteration);
-        }
-
-        /* global discordClient */
-        if (discordClient) {
-            discordClient.send(message)
-                .then(message => console.log('DISCORD: NOTIFICATION SENT'))
-                .catch(error => console.error(`[ERROR] DISCORD: ${error}`));
-        }
+                    s3.putObject(s3Opts, function(error, data) {});
+                }
+            }
+        )
     }
 
     var checkInterval = process.env.CHECK_INTERVAL || 60;
     getDonationsFromCryptoID('ecc', '516674', notify, checkInterval);
     getDonationsFromCryptoID('ltc', '24758298', notify, checkInterval);
-    getDonationsFromBlockExplorer('bch', '1LC8zhYNXgRQ5d6sCTxDrC8wBq6D1gdQDZ', notify, 60);
-    getDonationsFromBlockExplorer('btc', '1LC8zhYNXgRQ5d6sCTxDrC8wBq6D1gdQDZ', notify, 60);
+    getDonationsFromBlockExplorer('bch', '1LC8zhYNXgRQ5d6sCTxDrC8wBq6D1gdQDZ', notify, checkInterval);
+    getDonationsFromBlockExplorer('btc', '1LC8zhYNXgRQ5d6sCTxDrC8wBq6D1gdQDZ', notify, checkInterval);
 };
